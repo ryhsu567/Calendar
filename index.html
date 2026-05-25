@@ -239,27 +239,6 @@
         .legend-item { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-2); }
         .legend-swatch { width: 28px; height: 12px; border-radius: 3px; flex-shrink: 0; }
 
-        /* Upcoming */
-        .upcoming-list { display: flex; flex-direction: column; gap: 8px; }
-        .upcoming-item {
-            padding: 10px 12px; border-radius: var(--radius);
-            border: 1px solid var(--border); background: var(--surface2);
-        }
-        .upcoming-item.overlap-item {
-            background: var(--amber-bg);
-            border-color: #FCD34D;
-        }
-        .upcoming-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
-        .upcoming-loc { font-size: 13px; font-weight: 600; }
-        .upcoming-countdown {
-            font-size: 10px; font-weight: 600; padding: 2px 7px;
-            border-radius: 20px; font-family: 'DM Mono', monospace;
-        }
-        .upcoming-countdown.ryan { background: var(--blue-bg); color: var(--blue-text); }
-        .upcoming-countdown.hannah { background: var(--pink-bg); color: var(--pink-text); }
-        .upcoming-countdown.overlap { background: var(--amber-bg); color: var(--amber-text); }
-        .upcoming-meta { font-size: 11px; color: var(--text-3); }
-
         /* Calendar */
         .calendar-wrap {
             background: var(--surface);
@@ -427,16 +406,6 @@
                 <div class="form-error" id="dateError" style="margin-top:6px">Please enter valid dates (end can't be before start).</div>
 
                 <button class="btn-primary" onclick="addTrip()">Log trip</button>
-            </div>
-
-            <div class="card">
-                <div class="card-title">
-                    Upcoming
-                    <span id="upcomingCount" style="font-size:11px;color:var(--text-3);font-weight:400;text-transform:none;letter-spacing:0"></span>
-                </div>
-                <div class="upcoming-list" id="upcomingList">
-                    <div class="empty-state">No upcoming trips.</div>
-                </div>
             </div>
 
             <div class="card">
@@ -659,87 +628,41 @@
     }
 
     function renderStats() {
-        const { ryanDays, hannahDays, count } = getOverlapDays();
+        const { ryanDays, hannahDays } = getOverlapDays();
         const ryanTrips = trips.filter(t => t.person === 'Ryan').length;
         const hannahTrips = trips.filter(t => t.person === 'Hannah').length;
-        const upcoming = trips.filter(t => toDateOnly(t.end + 'T00:00:00') >= today).length;
+
+        const thisYear = today.getFullYear();
+        const thisMonth = today.getMonth();
+        const daysInMonth = new Date(thisYear, thisMonth + 1, 0).getDate();
+        let ryanThisMonth = 0, hannahThisMonth = 0;
+        for (let d = 1; d <= daysInMonth; d++) {
+            const key = new Date(thisYear, thisMonth, d).toISOString().slice(0, 10);
+            if (ryanDays.has(key)) ryanThisMonth++;
+            if (hannahDays.has(key)) hannahThisMonth++;
+        }
+        const monthName = today.toLocaleDateString('en-US', { month: 'short' });
+
+        const next = trips
+            .map(parseTrip)
+            .filter(t => t.startDate >= today)
+            .sort((a, b) => a.startDate - b.startDate)[0];
+        let nextHtml, nextSub;
+        if (next) {
+            const du = daysUntil(next.start);
+            nextHtml = `<div class="stat-value" style="color:${next.person === 'Ryan' ? 'var(--blue)' : 'var(--pink)'};font-size:18px;line-height:1.2">${du === 0 ? 'Today' : `${du}d`}</div>`;
+            nextSub = `${next.person} · ${next.location}`;
+        } else {
+            nextHtml = `<div class="stat-value" style="color:var(--text-3);font-size:18px">—</div>`;
+            nextSub = 'No upcoming trips';
+        }
 
         document.getElementById('statsStrip').innerHTML = `
             <div class="stat-card"><div class="stat-label">Ryan's trips</div><div class="stat-value blue">${ryanTrips}</div><div class="stat-sub">${ryanDays.size} days total</div></div>
             <div class="stat-card"><div class="stat-label">Hannah's trips</div><div class="stat-value pink">${hannahTrips}</div><div class="stat-sub">${hannahDays.size} days total</div></div>
-            <div class="stat-card"><div class="stat-label">Overlap days</div><div class="stat-value amber">${count}</div><div class="stat-sub">Both away</div></div>
-            <div class="stat-card"><div class="stat-label">Upcoming trips</div><div class="stat-value green">${upcoming}</div><div class="stat-sub">Not yet ended</div></div>
+            <div class="stat-card"><div class="stat-label">Away this month (${monthName})</div><div class="stat-value" style="font-size:16px;padding-top:2px"><span style="color:var(--blue)">${ryanThisMonth}d</span> <span style="color:var(--text-3);font-weight:400;font-size:13px">·</span> <span style="color:var(--pink)">${hannahThisMonth}d</span></div><div class="stat-sub">Ryan · Hannah</div></div>
+            <div class="stat-card"><div class="stat-label">Next trip</div>${nextHtml}<div class="stat-sub">${nextSub}</div></div>
         `;
-    }
-
-    function renderUpcoming() {
-        const sorted = trips
-            .map(parseTrip)
-            .filter(t => t.endDate >= today)
-            .sort((a, b) => a.startDate - b.startDate);
-
-        const { ryanDays, hannahDays } = getOverlapDays();
-        const overlapRanges = [];
-        const allDays = [...ryanDays].filter(k => hannahDays.has(k)).sort();
-
-        if (allDays.length > 0) {
-            let rangeStart = allDays[0], rangeEnd = allDays[0];
-            for (let i = 1; i < allDays.length; i++) {
-                const prev = new Date(rangeEnd);
-                prev.setDate(prev.getDate() + 1);
-                if (allDays[i] === prev.toISOString().slice(0, 10)) {
-                    rangeEnd = allDays[i];
-                } else {
-                    if (toDateOnly(rangeEnd + 'T00:00:00') >= today)
-                        overlapRanges.push({ start: rangeStart, end: rangeEnd });
-                    rangeStart = allDays[i];
-                    rangeEnd = allDays[i];
-                }
-            }
-            if (toDateOnly(rangeEnd + 'T00:00:00') >= today)
-                overlapRanges.push({ start: rangeStart, end: rangeEnd });
-        }
-
-        const container = document.getElementById('upcomingList');
-        if (sorted.length === 0 && overlapRanges.length === 0) {
-            container.innerHTML = '<div class="empty-state">No upcoming trips.</div>';
-            document.getElementById('upcomingCount').textContent = '';
-            return;
-        }
-
-        document.getElementById('upcomingCount').textContent = sorted.length + ' trip' + (sorted.length !== 1 ? 's' : '');
-
-        let html = sorted.slice(0, 4).map(t => {
-            const du = daysUntil(t.start);
-            const dur = daysBetween(t.startDate, t.endDate);
-            const countdownText = du > 0 ? `in ${du}d` : du === 0 ? 'today' : `${Math.abs(du)}d ago`;
-            return `
-                <div class="upcoming-item">
-                    <div class="upcoming-header">
-                        <span class="upcoming-loc">${t.location}</span>
-                        <span class="upcoming-countdown ${t.person.toLowerCase()}">${countdownText}</span>
-                    </div>
-                    <div class="upcoming-meta">${t.person} · ${fmt(t.start)}${t.isSingle ? '' : ` – ${fmt(t.end)}`} · ${dur} day${dur !== 1 ? 's' : ''}</div>
-                </div>
-            `;
-        }).join('');
-
-        overlapRanges.slice(0, 2).forEach(r => {
-            const dur = daysBetween(toDateOnly(r.start + 'T00:00:00'), toDateOnly(r.end + 'T00:00:00'));
-            const du = daysUntil(r.start);
-            const countdownText = du > 0 ? `in ${du}d` : du === 0 ? 'today' : `${Math.abs(du)}d ago`;
-            html += `
-                <div class="upcoming-item overlap-item">
-                    <div class="upcoming-header">
-                        <span class="upcoming-loc">Both away</span>
-                        <span class="upcoming-countdown overlap">${countdownText}</span>
-                    </div>
-                    <div class="upcoming-meta">${fmt(r.start)} – ${fmt(r.end)} · ${dur} day${dur !== 1 ? 's' : ''} overlap</div>
-                </div>
-            `;
-        });
-
-        container.innerHTML = html;
     }
 
     function renderTripList() {
@@ -852,7 +775,6 @@
 
     function renderAll() {
         renderStats();
-        renderUpcoming();
         renderTripList();
         renderCalendar();
     }
