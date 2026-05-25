@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Sync — Ryan & Hannah</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #F7F6F2;
+            --surface: #FFFFFF;
+            --surface2: #F0EFE9;
+            --border: #E2E0D8;
+            --border-strong: #C8C6BC;
+            --text: #1A1916;
+            --text-2: #6B6960;
+            --text-3: #9E9C94;
+            --blue: #2563EB;
+            --blue-bg: #EFF4FF;
+            --blue-text: #1E40AF;
+            --pink: #DB2777;
+            --pink-bg: #FDF2F8;
+            --pink-text: #9D174D;
+            --amber: #D97706;
+            --amber-bg: #FFFBEB;
+            --amber-text: #92400E;
+            --green: #059669;
+            --green-bg: #ECFDF5;
+            --green-text: #065F46;
+            --today-bg: #1A1916;
+            --today-text: #FFFFFF;
+            --radius: 10px;
+            --radius-lg: 14px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 24px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .app { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+        /* Header */
+        .header {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            box-shadow: var(--shadow);
+        }
+        .header-left { display: flex; align-items: center; gap: 14px; }
+        .logo {
+            width: 40px; height: 40px;
+            background: var(--text);
+            color: #fff;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 600; font-size: 13px; letter-spacing: -0.5px;
+            font-family: 'DM Mono', monospace;
+            flex-shrink: 0;
+        }
+        .header-title { font-size: 16px; font-weight: 600; color: var(--text); line-height: 1.2; }
+        .header-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+        .header-center { display: flex; align-items: center; gap: 8px; }
+        .month-nav {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            display: flex; align-items: center;
+            overflow: hidden;
+        }
+        .month-nav button {
+            background: none; border: none; cursor: pointer;
+            padding: 8px 14px;
+            color: var(--text-2);
+            font-size: 16px; line-height: 1;
+            transition: background 0.15s, color 0.15s;
+        }
+        .month-nav button:hover { background: var(--border); color: var(--text); }
+        .month-label {
+            font-size: 13px; font-weight: 600; min-width: 148px; text-align: center;
+            color: var(--text); letter-spacing: 0.02em; padding: 0 4px;
+            font-family: 'DM Mono', monospace;
+        }
+        .header-right { display: flex; gap: 8px; align-items: center; }
+        .btn-ghost {
+            background: none; border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 7px 14px; font-size: 12px; font-weight: 500; cursor: pointer;
+            color: var(--text-2); transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--border-strong); }
+        .btn-ghost svg { width: 14px; height: 14px; }
+
+        /* Stat strip */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            box-shadow: var(--shadow);
+        }
+        .stat-label { font-size: 11px; color: var(--text-3); font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 6px; }
+        .stat-value { font-size: 26px; font-weight: 600; font-family: 'DM Mono', monospace; line-height: 1; }
+        .stat-value.blue { color: var(--blue); }
+        .stat-value.pink { color: var(--pink); }
+        .stat-value.amber { color: var(--amber); }
+        .stat-value.green { color: var(--green); }
+        .stat-sub { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
+        /* Layout */
+        .layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; align-items: start; }
+        @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+        /* Sidebar */
+        .sidebar { display: flex; flex-direction: column; gap: 16px; }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 18px;
+            box-shadow: var(--shadow);
+        }
+        .card-title {
+            font-size: 11px; font-weight: 600; color: var(--text-3);
+            text-transform: uppercase; letter-spacing: 0.08em;
+            margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;
+        }
+        .form-group { margin-bottom: 12px; }
+        .form-label { font-size: 11px; font-weight: 500; color: var(--text-3); margin-bottom: 5px; display: block; letter-spacing: 0.03em; }
+        .form-input {
+            width: 100%; padding: 9px 12px;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: var(--radius); font-size: 13px; font-family: 'DM Sans', sans-serif;
+            color: var(--text); outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .form-input:focus { border-color: var(--border-strong); box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
+        .form-input::placeholder { color: var(--text-3); }
+
+        /* Person toggle */
+        .person-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 14px; }
+        .person-btn {
+            padding: 9px; border-radius: var(--radius); font-size: 12px; font-weight: 600;
+            border: 1.5px solid var(--border); background: var(--surface2);
+            cursor: pointer; transition: all 0.15s; color: var(--text-3);
+            letter-spacing: 0.04em; font-family: 'DM Sans', sans-serif;
+        }
+        .person-btn.active-ryan { border-color: var(--blue); background: var(--blue-bg); color: var(--blue-text); }
+        .person-btn.active-hannah { border-color: var(--pink); background: var(--pink-bg); color: var(--pink-text); }
+
+        /* Single day toggle */
+        .toggle-row {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 9px 12px; margin-bottom: 12px;
+            cursor: pointer;
+        }
+        .toggle-label { font-size: 12px; font-weight: 500; color: var(--text-2); }
+        .toggle-switch { position: relative; width: 36px; height: 20px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; inset: 0;
+            background: var(--border-strong); border-radius: 20px;
+            transition: background 0.2s;
+        }
+        .toggle-slider::before {
+            content: ''; position: absolute;
+            width: 14px; height: 14px; border-radius: 50%;
+            left: 3px; top: 3px; background: white;
+            transition: transform 0.2s;
+        }
+        .toggle-switch input:checked + .toggle-slider { background: var(--text); }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+        .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .date-row.single { grid-template-columns: 1fr; }
+
+        .btn-primary {
+            width: 100%; padding: 11px;
+            background: var(--text); color: white;
+            border: none; border-radius: var(--radius);
+            font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+            cursor: pointer; transition: background 0.15s, transform 0.1s;
+            letter-spacing: 0.02em; margin-top: 4px;
+        }
+        .btn-primary:hover { background: #333; }
+        .btn-primary:active { transform: scale(0.99); }
+
+        /* Trip history */
+        .trip-history { max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+        .trip-history::-webkit-scrollbar { width: 3px; }
+        .trip-history::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        .trip-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 10px; background: var(--surface2);
+            border-radius: var(--radius); border: 1px solid var(--border);
+            transition: border-color 0.15s;
+        }
+        .trip-item:hover { border-color: var(--border-strong); }
+        .trip-item-bar { width: 3px; height: 36px; border-radius: 2px; flex-shrink: 0; }
+        .trip-item-bar.ryan { background: var(--blue); }
+        .trip-item-bar.hannah { background: var(--pink); }
+        .trip-item-info { flex: 1; min-width: 0; }
+        .trip-item-person { font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+        .trip-item-person.ryan { color: var(--blue-text); }
+        .trip-item-person.hannah { color: var(--pink-text); }
+        .trip-item-loc { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .trip-item-dates { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+        .trip-delete {
+            background: none; border: none; cursor: pointer;
+            color: var(--text-3); font-size: 16px; line-height: 1; padding: 4px;
+            border-radius: 6px; transition: all 0.15s; flex-shrink: 0;
+        }
+        .trip-delete:hover { color: #dc2626; background: #FEF2F2; }
+        .empty-state { text-align: center; padding: 20px 10px; color: var(--text-3); font-size: 13px; }
+
+        /* Legend */
+        .legend { display: flex; flex-direction: column; gap: 8px; }
+        .legend-item { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-2); }
+        .legend-swatch { width: 28px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+        /* Upcoming */
+        .upcoming-list { display: flex; flex-direction: column; gap: 8px; }
+        .upcoming-item {
+            padding: 10px 12px; border-radius: var(--radius);
+            border: 1px solid var(--border); background: var(--surface2);
+        }
+        .upcoming-item.overlap-item {
+            background: var(--amber-bg);
+            border-color: #FCD34D;
+        }
+        .upcoming-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+        .upcoming-loc { font-size: 13px; font-weight: 600; }
+        .upcoming-countdown {
+            font-size: 10px; font-weight: 600; padding: 2px 7px;
+            border-radius: 20px; font-family: 'DM Mono', monospace;
+        }
+        .upcoming-countdown.ryan { background: var(--blue-bg); color: var(--blue-text); }
+        .upcoming-countdown.hannah { background: var(--pink-bg); color: var(--pink-text); }
+        .upcoming-countdown.overlap { background: var(--amber-bg); color: var(--amber-text); }
+        .upcoming-meta { font-size: 11px; color: var(--text-3); }
+
+        /* Calendar */
+        .calendar-wrap {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+        .cal-dow {
+            background: var(--surface2); padding: 10px 8px;
+            text-align: center; font-size: 10px; font-weight: 600;
+            color: var(--text-3); letter-spacing: 0.06em; text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+        }
+        .cal-day {
+            min-height: 100px; padding: 8px;
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+            vertical-align: top; cursor: pointer;
+            transition: background 0.12s;
+            position: relative;
+        }
+        .cal-day:hover { background: var(--surface2); }
+        .cal-day.empty { background: var(--bg); cursor: default; }
+        .cal-day.empty:hover { background: var(--bg); }
+        .cal-day.has-overlap { background: #FFFCF0; }
+        .cal-day.has-overlap:hover { background: #FFF8E1; }
+        .day-num {
+            font-size: 12px; font-weight: 600; color: var(--text-3);
+            width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; margin-bottom: 5px;
+        }
+        .cal-day.today .day-num { background: var(--today-bg); color: var(--today-text); }
+        .cal-day.today { background: #FAFAF8; }
+        .pills { display: flex; flex-direction: column; gap: 3px; }
+        .pill {
+            font-size: 10px; font-weight: 600; padding: 3px 7px;
+            border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            letter-spacing: 0.01em;
+        }
+        .pill.ryan { background: var(--blue-bg); color: var(--blue-text); }
+        .pill.hannah { background: var(--pink-bg); color: var(--pink-text); }
+        .pill.overlap { background: var(--amber-bg); color: var(--amber-text); }
+        .pill.single::before { content: '· '; }
+
+        /* Toast */
+        #toast {
+            position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+            background: var(--text); color: white;
+            padding: 12px 18px; border-radius: var(--radius);
+            font-size: 13px; font-weight: 500;
+            box-shadow: var(--shadow-md);
+            transform: translateY(20px); opacity: 0;
+            transition: all 0.25s ease;
+            display: flex; align-items: center; gap: 10px;
+            pointer-events: none;
+        }
+        #toast.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
+        #toast button {
+            background: rgba(255,255,255,0.15); border: none; color: white;
+            font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 6px;
+            cursor: pointer; font-family: 'DM Sans', sans-serif;
+        }
+        #toast button:hover { background: rgba(255,255,255,0.25); }
+
+        /* Error */
+        .form-error { font-size: 11px; color: #dc2626; margin-top: 5px; display: none; }
+        .form-error.show { display: block; }
+
+        /* Day detail popup */
+        .day-popup {
+            display: none; position: absolute; z-index: 100; top: 100%; left: 0;
+            background: var(--surface); border: 1px solid var(--border-strong);
+            border-radius: var(--radius); box-shadow: var(--shadow-md);
+            padding: 12px 14px; min-width: 200px; max-width: 240px;
+        }
+        .cal-day:hover .day-popup { display: block; }
+        .popup-date { font-size: 11px; font-weight: 600; color: var(--text-3); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .popup-trip { padding: 7px 9px; border-radius: 7px; margin-bottom: 5px; }
+        .popup-trip:last-child { margin-bottom: 0; }
+        .popup-trip.ryan { background: var(--blue-bg); }
+        .popup-trip.hannah { background: var(--pink-bg); }
+        .popup-trip.overlap { background: var(--amber-bg); }
+        .popup-trip-person { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+        .popup-trip-person.ryan { color: var(--blue-text); }
+        .popup-trip-person.hannah { color: var(--pink-text); }
+        .popup-trip-person.overlap { color: var(--amber-text); }
+        .popup-trip-loc { font-size: 13px; font-weight: 500; color: var(--text); margin-top: 1px; }
+        .popup-trip-dates { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px; }
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">TS</div>
+            <div>
+                <div class="header-title">Travel Sync</div>
+                <div class="header-sub">Ryan &amp; Hannah's shared calendar</div>
+            </div>
+        </div>
+        <div class="header-center">
+            <div class="month-nav">
+                <button onclick="changeMonth(-1)" aria-label="Previous month">&#8592;</button>
+                <div class="month-label" id="monthDisplay">July 2026</div>
+                <button onclick="changeMonth(1)" aria-label="Next month">&#8594;</button>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn-ghost" onclick="jumpToToday()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                Today
+            </button>
+            <button class="btn-ghost" onclick="jumpToNextTrip()">
+                Next trip &#8594;
+            </button>
+        </div>
+    </header>
+
+    <div class="stats" id="statsStrip"></div>
+
+    <div class="layout">
+        <div class="sidebar">
+
+            <div class="card">
+                <div class="card-title">Add trip</div>
+
+                <div class="person-toggle">
+                    <button class="person-btn active-ryan" id="btnRyan" onclick="setPerson('Ryan')">Ryan</button>
+                    <button class="person-btn" id="btnHannah" onclick="setPerson('Hannah')">Hannah</button>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="tripLocation">Destination</label>
+                    <input type="text" id="tripLocation" class="form-input" placeholder="e.g. Tokyo, Japan">
+                    <div class="form-error" id="locError">Please enter a destination.</div>
+                </div>
+
+                <label class="toggle-row" for="isSingleDay">
+                    <span class="toggle-label">Single day trip</span>
+                    <span class="toggle-switch">
+                        <input type="checkbox" id="isSingleDay" onchange="toggleDateMode()">
+                        <span class="toggle-slider"></span>
+                    </span>
+                </label>
+
+                <div class="date-row" id="dateRow">
+                    <div class="form-group" style="margin-bottom:0">
+                        <label class="form-label" id="startLabel" for="tripStart">Start date</label>
+                        <input type="date" id="tripStart" class="form-input">
+                    </div>
+                    <div class="form-group" id="endGroup" style="margin-bottom:0">
+                        <label class="form-label" for="tripEnd">End date</label>
+                        <input type="date" id="tripEnd" class="form-input">
+                    </div>
+                </div>
+                <div class="form-error" id="dateError" style="margin-top:6px">Please enter valid dates (end can't be before start).</div>
+
+                <button class="btn-primary" onclick="addTrip()">Log trip</button>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    Upcoming
+                    <span id="upcomingCount" style="font-size:11px;color:var(--text-3);font-weight:400;text-transform:none;letter-spacing:0"></span>
+                </div>
+                <div class="upcoming-list" id="upcomingList">
+                    <div class="empty-state">No upcoming trips.</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Legend</div>
+                <div class="legend">
+                    <div class="legend-item"><span class="legend-swatch" style="background:var(--blue-bg);border:1.5px solid #BFDBFE"></span>Ryan's trips</div>
+                    <div class="legend-item"><span class="legend-swatch" style="background:var(--pink-bg);border:1.5px solid #FBCFE8"></span>Hannah's trips</div>
+                    <div class="legend-item"><span class="legend-swatch" style="background:var(--amber-bg);border:1.5px solid #FCD34D"></span>Both away — overlap</div>
+                    <div class="legend-item">
+                        <span style="width:28px;height:24px;border-radius:50%;background:var(--today-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <span style="font-size:10px;font-weight:600;color:white;font-family:'DM Mono',monospace">8</span>
+                        </span>
+                        Today
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">History <span id="historyCount" style="font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--text-3)"></span></div>
+                <div class="trip-history" id="tripList">
+                    <div class="empty-state">No trips logged yet.</div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="calendar-wrap">
+            <div class="cal-grid">
+                <div class="cal-dow">Sun</div>
+                <div class="cal-dow">Mon</div>
+                <div class="cal-dow">Tue</div>
+                <div class="cal-dow">Wed</div>
+                <div class="cal-dow">Thu</div>
+                <div class="cal-dow">Fri</div>
+                <div class="cal-dow">Sat</div>
+                <div id="calendarDays" class="contents"></div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div id="toast">
+    <span id="toastMsg"></span>
+    <button id="undoBtn" onclick="undoDelete()">Undo</button>
+</div>
+
+<script>
+    const STORAGE_KEY = 'travel_sync_trips';
+    let trips = [];
+    try { trips = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) { trips = []; }
+    let viewDate = new Date();
+    viewDate.setDate(1);
+    let selectedPerson = 'Ryan';
+    let lastDeleted = null;
+    let toastTimer = null;
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    function toDateOnly(d) {
+        const x = new Date(d);
+        x.setHours(0,0,0,0);
+        return x;
+    }
+
+    function parseTrip(t) {
+        return {
+            ...t,
+            startDate: toDateOnly(t.start),
+            endDate: toDateOnly(t.end)
+        };
+    }
+
+    function fmt(dateStr) {
+        const d = new Date(dateStr + 'T00:00:00');
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    function fmtFull(dateStr) {
+        const d = new Date(dateStr + 'T00:00:00');
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function daysBetween(a, b) {
+        return Math.round((b - a) / 86400000) + 1;
+    }
+
+    function daysUntil(dateStr) {
+        const d = toDateOnly(dateStr + 'T00:00:00');
+        return Math.round((d - today) / 86400000);
+    }
+
+    function toggleDateMode() {
+        const single = document.getElementById('isSingleDay').checked;
+        const endGroup = document.getElementById('endGroup');
+        const dateRow = document.getElementById('dateRow');
+        const startLabel = document.getElementById('startLabel');
+        if (single) {
+            endGroup.style.display = 'none';
+            dateRow.classList.add('single');
+            startLabel.textContent = 'Date';
+        } else {
+            endGroup.style.display = '';
+            dateRow.classList.remove('single');
+            startLabel.textContent = 'Start date';
+        }
+    }
+
+    function setPerson(name) {
+        selectedPerson = name;
+        document.getElementById('btnRyan').className = 'person-btn' + (name === 'Ryan' ? ' active-ryan' : '');
+        document.getElementById('btnHannah').className = 'person-btn' + (name === 'Hannah' ? ' active-hannah' : '');
+    }
+
+    function changeMonth(offset) {
+        viewDate.setMonth(viewDate.getMonth() + offset);
+        renderCalendar();
+    }
+
+    function jumpToToday() {
+        viewDate = new Date();
+        viewDate.setDate(1);
+        renderCalendar();
+    }
+
+    function jumpToNextTrip() {
+        const sorted = trips
+            .map(parseTrip)
+            .filter(t => t.endDate >= today)
+            .sort((a, b) => a.startDate - b.startDate);
+        if (sorted.length === 0) return showToast('No upcoming trips found.', false);
+        const next = sorted[0];
+        viewDate = new Date(next.startDate.getFullYear(), next.startDate.getMonth(), 1);
+        renderCalendar();
+    }
+
+    function addTrip() {
+        const loc = document.getElementById('tripLocation').value.trim();
+        const start = document.getElementById('tripStart').value;
+        const single = document.getElementById('isSingleDay').checked;
+        let end = single ? start : document.getElementById('tripEnd').value;
+
+        let valid = true;
+        document.getElementById('locError').classList.toggle('show', !loc);
+        if (!loc) valid = false;
+
+        const dateErr = !start || (!single && !end) || (start && end && end < start);
+        document.getElementById('dateError').classList.toggle('show', dateErr);
+        if (dateErr || !start) valid = false;
+
+        if (!valid) return;
+
+        trips.push({
+            id: Date.now(),
+            person: selectedPerson,
+            location: loc,
+            start: start,
+            end: end,
+            isSingle: single
+        });
+        saveAndRender();
+        document.getElementById('tripLocation').value = '';
+        document.getElementById('tripStart').value = '';
+        document.getElementById('tripEnd').value = '';
+        document.getElementById('locError').classList.remove('show');
+        document.getElementById('dateError').classList.remove('show');
+        showToast('Trip added!', false);
+    }
+
+    function deleteTrip(id) {
+        const idx = trips.findIndex(t => t.id === id);
+        if (idx === -1) return;
+        lastDeleted = { trip: trips[idx], idx };
+        trips.splice(idx, 1);
+        saveAndRender();
+        showToast('Trip deleted.', true);
+    }
+
+    function undoDelete() {
+        if (!lastDeleted) return;
+        trips.splice(lastDeleted.idx, 0, lastDeleted.trip);
+        lastDeleted = null;
+        saveAndRender();
+        hideToast();
+    }
+
+    function showToast(msg, showUndo) {
+        clearTimeout(toastTimer);
+        document.getElementById('toastMsg').textContent = msg;
+        document.getElementById('undoBtn').style.display = showUndo ? '' : 'none';
+        document.getElementById('toast').classList.add('show');
+        toastTimer = setTimeout(hideToast, 4000);
+    }
+
+    function hideToast() {
+        document.getElementById('toast').classList.remove('show');
+    }
+
+    function saveAndRender() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
+        renderAll();
+    }
+
+    function getOverlapDays() {
+        const ryanDays = new Set();
+        const hannahDays = new Set();
+        trips.forEach(t => {
+            const p = parseTrip(t);
+            let d = new Date(p.startDate);
+            while (d <= p.endDate) {
+                const key = d.toISOString().slice(0, 10);
+                if (t.person === 'Ryan') ryanDays.add(key);
+                else hannahDays.add(key);
+                d.setDate(d.getDate() + 1);
+            }
+        });
+        let count = 0;
+        ryanDays.forEach(k => { if (hannahDays.has(k)) count++; });
+        return { ryanDays, hannahDays, count };
+    }
+
+    function renderStats() {
+        const { ryanDays, hannahDays, count } = getOverlapDays();
+        const ryanTrips = trips.filter(t => t.person === 'Ryan').length;
+        const hannahTrips = trips.filter(t => t.person === 'Hannah').length;
+        const upcoming = trips.filter(t => toDateOnly(t.end + 'T00:00:00') >= today).length;
+
+        document.getElementById('statsStrip').innerHTML = `
+            <div class="stat-card"><div class="stat-label">Ryan's trips</div><div class="stat-value blue">${ryanTrips}</div><div class="stat-sub">${ryanDays.size} days total</div></div>
+            <div class="stat-card"><div class="stat-label">Hannah's trips</div><div class="stat-value pink">${hannahTrips}</div><div class="stat-sub">${hannahDays.size} days total</div></div>
+            <div class="stat-card"><div class="stat-label">Overlap days</div><div class="stat-value amber">${count}</div><div class="stat-sub">Both away</div></div>
+            <div class="stat-card"><div class="stat-label">Upcoming trips</div><div class="stat-value green">${upcoming}</div><div class="stat-sub">Not yet ended</div></div>
+        `;
+    }
+
+    function renderUpcoming() {
+        const sorted = trips
+            .map(parseTrip)
+            .filter(t => t.endDate >= today)
+            .sort((a, b) => a.startDate - b.startDate);
+
+        const { ryanDays, hannahDays } = getOverlapDays();
+        const overlapRanges = [];
+        const allDays = [...ryanDays].filter(k => hannahDays.has(k)).sort();
+
+        if (allDays.length > 0) {
+            let rangeStart = allDays[0], rangeEnd = allDays[0];
+            for (let i = 1; i < allDays.length; i++) {
+                const prev = new Date(rangeEnd);
+                prev.setDate(prev.getDate() + 1);
+                if (allDays[i] === prev.toISOString().slice(0, 10)) {
+                    rangeEnd = allDays[i];
+                } else {
+                    if (toDateOnly(rangeEnd + 'T00:00:00') >= today)
+                        overlapRanges.push({ start: rangeStart, end: rangeEnd });
+                    rangeStart = allDays[i];
+                    rangeEnd = allDays[i];
+                }
+            }
+            if (toDateOnly(rangeEnd + 'T00:00:00') >= today)
+                overlapRanges.push({ start: rangeStart, end: rangeEnd });
+        }
+
+        const container = document.getElementById('upcomingList');
+        if (sorted.length === 0 && overlapRanges.length === 0) {
+            container.innerHTML = '<div class="empty-state">No upcoming trips.</div>';
+            document.getElementById('upcomingCount').textContent = '';
+            return;
+        }
+
+        document.getElementById('upcomingCount').textContent = sorted.length + ' trip' + (sorted.length !== 1 ? 's' : '');
+
+        let html = sorted.slice(0, 4).map(t => {
+            const du = daysUntil(t.start);
+            const dur = daysBetween(t.startDate, t.endDate);
+            const countdownText = du > 0 ? `in ${du}d` : du === 0 ? 'today' : `${Math.abs(du)}d ago`;
+            return `
+                <div class="upcoming-item">
+                    <div class="upcoming-header">
+                        <span class="upcoming-loc">${t.location}</span>
+                        <span class="upcoming-countdown ${t.person.toLowerCase()}">${countdownText}</span>
+                    </div>
+                    <div class="upcoming-meta">${t.person} · ${fmt(t.start)}${t.isSingle ? '' : ` – ${fmt(t.end)}`} · ${dur} day${dur !== 1 ? 's' : ''}</div>
+                </div>
+            `;
+        }).join('');
+
+        overlapRanges.slice(0, 2).forEach(r => {
+            const dur = daysBetween(toDateOnly(r.start + 'T00:00:00'), toDateOnly(r.end + 'T00:00:00'));
+            const du = daysUntil(r.start);
+            const countdownText = du > 0 ? `in ${du}d` : du === 0 ? 'today' : `${Math.abs(du)}d ago`;
+            html += `
+                <div class="upcoming-item overlap-item">
+                    <div class="upcoming-header">
+                        <span class="upcoming-loc">Both away</span>
+                        <span class="upcoming-countdown overlap">${countdownText}</span>
+                    </div>
+                    <div class="upcoming-meta">${fmt(r.start)} – ${fmt(r.end)} · ${dur} day${dur !== 1 ? 's' : ''} overlap</div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function renderTripList() {
+        const list = document.getElementById('tripList');
+        const count = document.getElementById('historyCount');
+        if (trips.length === 0) {
+            list.innerHTML = '<div class="empty-state">No trips logged yet.</div>';
+            count.textContent = '';
+            return;
+        }
+        count.textContent = trips.length + ' total';
+        const sorted = [...trips].sort((a, b) => new Date(b.start) - new Date(a.start));
+        list.innerHTML = sorted.map(t => {
+            const dur = daysBetween(toDateOnly(t.start + 'T00:00:00'), toDateOnly(t.end + 'T00:00:00'));
+            return `
+                <div class="trip-item">
+                    <div class="trip-item-bar ${t.person.toLowerCase()}"></div>
+                    <div class="trip-item-info">
+                        <div class="trip-item-person ${t.person.toLowerCase()}">${t.person}</div>
+                        <div class="trip-item-loc">${t.location}</div>
+                        <div class="trip-item-dates">${fmt(t.start)}${t.isSingle ? '' : ` – ${fmt(t.end)}`} · ${dur}d</div>
+                    </div>
+                    <button class="trip-delete" onclick="deleteTrip(${t.id})" aria-label="Delete trip">&times;</button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderCalendar() {
+        const grid = document.getElementById('calendarDays');
+        const label = document.getElementById('monthDisplay');
+        grid.innerHTML = '';
+
+        const year = viewDate.getFullYear();
+        const month = viewDate.getMonth();
+        label.textContent = viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        const { ryanDays, hannahDays } = getOverlapDays();
+
+        for (let i = 0; i < firstDay; i++) {
+            const el = document.createElement('div');
+            el.className = 'cal-day empty';
+            grid.appendChild(el);
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const cur = new Date(year, month, d);
+            cur.setHours(0,0,0,0);
+            const key = cur.toISOString().slice(0, 10);
+            const isToday = cur.getTime() === today.getTime();
+
+            const active = trips.map(parseTrip).filter(t => cur >= t.startDate && cur <= t.endDate);
+            const rHere = active.filter(t => t.person === 'Ryan');
+            const hHere = active.filter(t => t.person === 'Hannah');
+            const overlap = rHere.length > 0 && hHere.length > 0;
+
+            const cell = document.createElement('div');
+            let cls = 'cal-day';
+            if (isToday) cls += ' today';
+            if (overlap) cls += ' has-overlap';
+            cell.className = cls;
+            cell.style.position = 'relative';
+
+            let pillsHtml = '';
+            if (overlap) {
+                const rLocs = rHere.map(t => t.location).join(', ');
+                const hLocs = hHere.map(t => t.location).join(', ');
+                pillsHtml = `<div class="pill overlap">Both away</div>`;
+                if (rLocs !== hLocs) pillsHtml += `<div class="pill ryan" style="font-size:9px;opacity:.8">${rLocs}</div><div class="pill hannah" style="font-size:9px;opacity:.8">${hLocs}</div>`;
+            } else {
+                active.forEach(t => {
+                    const cls2 = t.person === 'Ryan' ? 'ryan' : 'hannah';
+                    const pre = t.isSingle ? '· ' : '';
+                    pillsHtml += `<div class="pill ${cls2}">${pre}${t.location}</div>`;
+                });
+            }
+
+            let popupHtml = '';
+            if (active.length > 0) {
+                const dateLabel = cur.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                popupHtml = `<div class="day-popup"><div class="popup-date">${dateLabel}</div>`;
+                if (overlap) {
+                    popupHtml += `<div class="popup-trip overlap"><div class="popup-trip-person overlap">Both away</div></div>`;
+                }
+                active.forEach(t => {
+                    const cls2 = t.person.toLowerCase();
+                    popupHtml += `
+                        <div class="popup-trip ${cls2}">
+                            <div class="popup-trip-person ${cls2}">${t.person}</div>
+                            <div class="popup-trip-loc">${t.location}</div>
+                            <div class="popup-trip-dates">${fmtFull(t.start)}${t.isSingle ? '' : ` – ${fmtFull(t.end)}`}</div>
+                        </div>
+                    `;
+                });
+                popupHtml += '</div>';
+            }
+
+            cell.innerHTML = `
+                <div class="day-num">${d}</div>
+                <div class="pills">${pillsHtml}</div>
+                ${popupHtml}
+            `;
+            grid.appendChild(cell);
+        }
+    }
+
+    function renderAll() {
+        renderStats();
+        renderUpcoming();
+        renderTripList();
+        renderCalendar();
+    }
+
+    // Set date inputs to today's date as default
+    (function initDates() {
+        const todayStr = today.toISOString().slice(0, 10);
+        document.getElementById('tripStart').value = todayStr;
+        document.getElementById('tripEnd').value = todayStr;
+        document.getElementById('undoBtn').style.display = 'none';
+    })();
+
+    renderAll();
+</script>
+</body>
+</html>
