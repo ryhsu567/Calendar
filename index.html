@@ -464,7 +464,7 @@
         </div>
 
         <div class="calendar-wrap">
-            <div class="cal-grid">
+            <div id="calendarDays" class="cal-grid">
                 <div class="cal-dow">Sun</div>
                 <div class="cal-dow">Mon</div>
                 <div class="cal-dow">Tue</div>
@@ -472,7 +472,6 @@
                 <div class="cal-dow">Thu</div>
                 <div class="cal-dow">Fri</div>
                 <div class="cal-dow">Sat</div>
-                <div id="calendarDays" class="contents"></div>
             </div>
         </div>
     </div>
@@ -772,7 +771,8 @@
     function renderCalendar() {
         const grid = document.getElementById('calendarDays');
         const label = document.getElementById('monthDisplay');
-        grid.innerHTML = '';
+        const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        grid.innerHTML = days.map(d => `<div class="cal-dow">${d}</div>`).join('');
 
         const year = viewDate.getFullYear();
         const month = viewDate.getMonth();
