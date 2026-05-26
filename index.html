@@ -452,53 +452,72 @@
     <button id="undoBtn" onclick="undoDelete()">Undo</button>
 </div>
 
-<script>
-    const STORAGE_KEY = 'travel_sync_trips';
-    let trips = [];
-    try { trips = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) { trips = []; }
-    let viewDate = new Date();
-    viewDate.setDate(1);
-    let selectedPerson = 'Ryan';
-    let lastDeleted = null;
-    let toastTimer = null;
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    const today = new Date();
-    today.setHours(0,0,0,0);
+    const firebaseConfig = {
+        apiKey: "AIzaSyAkzpDjl42VcYPp5YkQSYVnxLHLq3XkpCw",
+        authDomain: "calendar-afe4e.firebaseapp.com",
+        projectId: "calendar-afe4e",
+        storageBucket: "calendar-afe4e.firebasestorage.app",
+        messagingSenderId: "813186329775",
+        appId: "1:813186329775:web:8e406932c403d57119b85a",
+        measurementId: "G-KQCR0BTQDD"
+    };
 
-    function toDateOnly(d) {
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    console.log("🚀 SUCCESS: Connected securely to Firestore cloud database!");
+
+    // Global state arrays & structures
+    window.trips = [];
+    window.viewDate = new Date();
+    window.viewDate.setDate(1);
+    window.selectedPerson = 'Ryan';
+    window.lastDeleted = null;
+    window.toastTimer = null;
+
+    window.today = new Date();
+    window.today.setHours(0,0,0,0);
+
+    // Date Utilities
+    window.toDateOnly = function(d) {
         const x = new Date(d);
         x.setHours(0,0,0,0);
         return x;
     }
 
-    function parseTrip(t) {
+    window.parseTrip = function(t) {
         return {
             ...t,
-            startDate: toDateOnly(t.start),
-            endDate: toDateOnly(t.end)
+            startDate: window.toDateOnly(t.start),
+            endDate: window.toDateOnly(t.end)
         };
     }
 
-    function fmt(dateStr) {
+    window.fmt = function(dateStr) {
         const d = new Date(dateStr + 'T00:00:00');
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
 
-    function fmtFull(dateStr) {
+    window.fmtFull = function(dateStr) {
         const d = new Date(dateStr + 'T00:00:00');
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
-    function daysBetween(a, b) {
+    window.daysBetween = function(a, b) {
         return Math.round((b - a) / 86400000) + 1;
     }
 
-    function daysUntil(dateStr) {
-        const d = toDateOnly(dateStr + 'T00:00:00');
-        return Math.round((d - today) / 86400000);
+    window.daysUntil = function(dateStr) {
+        const d = window.toDateOnly(dateStr + 'T00:00:00');
+        return Math.round((d - window.today) / 86400000);
     }
 
-    function toggleDateMode() {
+    // Interactive UI toggles
+    window.toggleDateMode = function() {
         const single = document.getElementById('isSingleDay').checked;
         const endGroup = document.getElementById('endGroup');
         const dateRow = document.getElementById('dateRow');
@@ -514,35 +533,36 @@
         }
     }
 
-    function setPerson(name) {
-        selectedPerson = name;
+    window.setPerson = function(name) {
+        window.selectedPerson = name;
         document.getElementById('btnRyan').className = 'person-btn' + (name === 'Ryan' ? ' active-ryan' : '');
         document.getElementById('btnHannah').className = 'person-btn' + (name === 'Hannah' ? ' active-hannah' : '');
     }
 
-    function changeMonth(offset) {
-        viewDate.setMonth(viewDate.getMonth() + offset);
-        renderCalendar();
+    window.changeMonth = function(offset) {
+        window.viewDate.setMonth(window.viewDate.getMonth() + offset);
+        window.renderCalendar();
     }
 
-    function jumpToToday() {
-        viewDate = new Date();
-        viewDate.setDate(1);
-        renderCalendar();
+    window.jumpToToday = function() {
+        window.viewDate = new Date();
+        window.viewDate.setDate(1);
+        window.renderCalendar();
     }
 
-    function jumpToNextTrip() {
-        const sorted = trips
-            .map(parseTrip)
-            .filter(t => t.endDate >= today)
+    window.jumpToNextTrip = function() {
+        const sorted = window.trips
+            .map(window.parseTrip)
+            .filter(t => t.endDate >= window.today)
             .sort((a, b) => a.startDate - b.startDate);
-        if (sorted.length === 0) return showToast('No upcoming trips found.', false);
+        if (sorted.length === 0) return window.showToast('No upcoming trips found.', false);
         const next = sorted[0];
-        viewDate = new Date(next.startDate.getFullYear(), next.startDate.getMonth(), 1);
-        renderCalendar();
+        window.viewDate = new Date(next.startDate.getFullYear(), next.startDate.getMonth(), 1);
+        window.renderCalendar();
     }
 
-    function addTrip() {
+    // Create (Write to Firestore)
+    window.addTrip = async function() {
         const loc = document.getElementById('tripLocation').value.trim();
         const start = document.getElementById('tripStart').value;
         const single = document.getElementById('isSingleDay').checked;
@@ -558,62 +578,85 @@
 
         if (!valid) return;
 
-        trips.push({
-            id: Date.now(),
-            person: selectedPerson,
+        const newTripData = {
+            person: window.selectedPerson,
             location: loc,
             start: start,
             end: end,
-            isSingle: single
-        });
-        saveAndRender();
-        document.getElementById('tripLocation').value = '';
-        document.getElementById('tripStart').value = '';
-        document.getElementById('tripEnd').value = '';
-        document.getElementById('locError').classList.remove('show');
-        document.getElementById('dateError').classList.remove('show');
-        showToast('Trip added!', false);
+            isSingle: single,
+            createdAt: new Date().getTime()
+        };
+
+        try {
+            await addDoc(collection(db, "trips"), newTripData);
+            document.getElementById('tripLocation').value = '';
+            document.getElementById('tripStart').value = '';
+            document.getElementById('tripEnd').value = '';
+            document.getElementById('locError').classList.remove('show');
+            document.getElementById('dateError').classList.remove('show');
+            window.showToast('Trip saved to cloud!', false);
+        } catch(err) {
+            console.error("Error pushing trip data: ", err);
+            window.showToast('Failed to save to database.', false);
+        }
     }
 
-    function deleteTrip(id) {
-        const idx = trips.findIndex(t => t.id === id);
+    // Delete from Firestore
+    window.deleteTrip = async function(id) {
+        const idx = window.trips.findIndex(t => t.id === id);
         if (idx === -1) return;
-        lastDeleted = { trip: trips[idx], idx };
-        trips.splice(idx, 1);
-        saveAndRender();
-        showToast('Trip deleted.', true);
+        window.lastDeleted = { trip: window.trips[idx], idx };
+        
+        try {
+            await deleteDoc(doc(db, "trips", id));
+            window.showToast('Trip deleted from cloud.', true);
+        } catch(err) {
+            console.error("Error removing trip data: ", err);
+        }
     }
 
-    function undoDelete() {
-        if (!lastDeleted) return;
-        trips.splice(lastDeleted.idx, 0, lastDeleted.trip);
-        lastDeleted = null;
-        saveAndRender();
-        hideToast();
+    // Undo delete action
+    window.undoDelete = async function() {
+        if (!window.lastDeleted) return;
+        const fallback = window.lastDeleted.trip;
+        
+        const restoredData = {
+            person: fallback.person,
+            location: fallback.location,
+            start: fallback.start,
+            end: fallback.end,
+            isSingle: fallback.isSingle,
+            createdAt: fallback.createdAt || new Date().getTime()
+        };
+
+        try {
+            await addDoc(collection(db, "trips"), restoredData);
+            window.lastDeleted = null;
+            window.hideToast();
+        } catch(err) {
+            console.error("Restoration failed: ", err);
+        }
     }
 
-    function showToast(msg, showUndo) {
-        clearTimeout(toastTimer);
+    // Notification handling UI
+    window.showToast = function(msg, showUndo) {
+        clearTimeout(window.toastTimer);
         document.getElementById('toastMsg').textContent = msg;
         document.getElementById('undoBtn').style.display = showUndo ? '' : 'none';
         document.getElementById('toast').classList.add('show');
-        toastTimer = setTimeout(hideToast, 4000);
+        window.toastTimer = setTimeout(window.hideToast, 4000);
     }
 
-    function hideToast() {
+    window.hideToast = function() {
         document.getElementById('toast').classList.remove('show');
     }
 
-    function saveAndRender() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
-        renderAll();
-    }
-
-    function getOverlapDays() {
+    // Logic Calculations
+    window.getOverlapDays = function() {
         const ryanDays = new Set();
         const hannahDays = new Set();
-        trips.forEach(t => {
-            const p = parseTrip(t);
+        window.trips.forEach(t => {
+            const p = window.parseTrip(t);
             let d = new Date(p.startDate);
             while (d <= p.endDate) {
                 const key = d.toISOString().slice(0, 10);
@@ -627,13 +670,14 @@
         return { ryanDays, hannahDays, count };
     }
 
-    function renderStats() {
-        const { ryanDays, hannahDays } = getOverlapDays();
-        const ryanTrips = trips.filter(t => t.person === 'Ryan').length;
-        const hannahTrips = trips.filter(t => t.person === 'Hannah').length;
+    // Render Stats Strip
+    window.renderStats = function() {
+        const { ryanDays, hannahDays } = window.getOverlapDays();
+        const ryanTrips = window.trips.filter(t => t.person === 'Ryan').length;
+        const hannahTrips = window.trips.filter(t => t.person === 'Hannah').length;
 
-        const thisYear = today.getFullYear();
-        const thisMonth = today.getMonth();
+        const thisYear = window.today.getFullYear();
+        const thisMonth = window.today.getMonth();
         const daysInMonth = new Date(thisYear, thisMonth + 1, 0).getDate();
         let ryanThisMonth = 0, hannahThisMonth = 0;
         for (let d = 1; d <= daysInMonth; d++) {
@@ -641,15 +685,15 @@
             if (ryanDays.has(key)) ryanThisMonth++;
             if (hannahDays.has(key)) hannahThisMonth++;
         }
-        const monthName = today.toLocaleDateString('en-US', { month: 'short' });
+        const monthName = window.today.toLocaleDateString('en-US', { month: 'short' });
 
-        const next = trips
-            .map(parseTrip)
-            .filter(t => t.startDate >= today)
+        const next = window.trips
+            .map(window.parseTrip)
+            .filter(t => t.startDate >= window.today)
             .sort((a, b) => a.startDate - b.startDate)[0];
         let nextHtml, nextSub;
         if (next) {
-            const du = daysUntil(next.start);
+            const du = window.daysUntil(next.start);
             nextHtml = `<div class="stat-value" style="color:${next.person === 'Ryan' ? 'var(--blue)' : 'var(--pink)'};font-size:18px;line-height:1.2">${du === 0 ? 'Today' : `${du}d`}</div>`;
             nextSub = `${next.person} · ${next.location}`;
         } else {
@@ -665,152 +709,142 @@
         `;
     }
 
-    function renderTripList() {
+    // Render Side History
+    window.renderTripList = function() {
         const list = document.getElementById('tripList');
         const count = document.getElementById('historyCount');
-        if (trips.length === 0) {
+        if (window.trips.length === 0) {
             list.innerHTML = '<div class="empty-state">No trips logged yet.</div>';
             count.textContent = '';
             return;
         }
-        count.textContent = trips.length + ' total';
-        const sorted = [...trips].sort((a, b) => new Date(b.start) - new Date(a.start));
+        count.textContent = window.trips.length + ' total';
+        const sorted = [...window.trips].sort((a, b) => new Date(b.start) - new Date(a.start));
         list.innerHTML = sorted.map(t => {
-            const dur = daysBetween(toDateOnly(t.start + 'T00:00:00'), toDateOnly(t.end + 'T00:00:00'));
+            const dur = window.daysBetween(window.toDateOnly(t.start + 'T00:00:00'), window.toDateOnly(t.end + 'T00:00:00'));
             return `
                 <div class="trip-item">
                     <div class="trip-item-bar ${t.person.toLowerCase()}"></div>
                     <div class="trip-item-info">
                         <div class="trip-item-person ${t.person.toLowerCase()}">${t.person}</div>
                         <div class="trip-item-loc">${t.location}</div>
-                        <div class="trip-item-dates">${fmt(t.start)}${t.isSingle ? '' : ` – ${fmt(t.end)}`} · ${dur}d</div>
+                        <div class="trip-item-dates">${window.fmt(t.start)}${t.isSingle ? '' : ` – ${window.fmt(t.end)}`} · ${dur}d</div>
                     </div>
-                    <button class="trip-delete" onclick="deleteTrip(${t.id})" aria-label="Delete trip">&times;</button>
+                    <button class="trip-delete" onclick="deleteTrip('${t.id}')" aria-label="Delete trip">&times;</button>
                 </div>
             `;
         }).join('');
     }
 
-    function renderCalendar() {
+    // Core Calendar Grid Construction
+    window.renderCalendar = function() {
         const grid = document.getElementById('calendarDays');
         const label = document.getElementById('monthDisplay');
         const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
         grid.innerHTML = days.map(d => `<div class="cal-dow">${d}</div>`).join('');
 
-        const year = viewDate.getFullYear();
-        const month = viewDate.getMonth();
-        label.textContent = viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const year = window.viewDate.getFullYear();
+        const month = window.viewDate.getMonth();
+        label.textContent = window.viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
         const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-        const { ryanDays, hannahDays } = getOverlapDays();
+        const { ryanDays, hannahDays } = window.getOverlapDays();
 
+        // Render empty cell slots padding leading up to month start day
         for (let i = 0; i < firstDay; i++) {
             const el = document.createElement('div');
             el.className = 'cal-day empty';
             grid.appendChild(el);
         }
 
-        for (let d = 1; d <= daysInMonth; d++) {
-            const cur = new Date(year, month, d);
-            cur.setHours(0,0,0,0);
-            const key = cur.toISOString().slice(0, 10);
-            const isToday = cur.getTime() === today.getTime();
+        // Build actual month days rows
+        for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
+            const dayCell = document.createElement('div');
+            dayCell.className = 'cal-day';
+            
+            const currentCellDate = new Date(year, month, dayNum);
+            currentCellDate.setHours(0,0,0,0);
+            
+            const dateISOStringKey = currentCellDate.toISOString().slice(0, 10);
 
-            const active = trips.map(parseTrip).filter(t => cur >= t.startDate && cur <= t.endDate);
-            const rHere = active.filter(t => t.person === 'Ryan');
-            const hHere = active.filter(t => t.person === 'Hannah');
-            const overlap = rHere.length > 0 && hHere.length > 0;
-
-            const cell = document.createElement('div');
-            let cls = 'cal-day';
-            if (isToday) cls += ' today';
-            if (overlap) cls += ' has-overlap';
-            cell.className = cls;
-            cell.style.position = 'relative';
-
-            let pillsHtml = '';
-            if (overlap) {
-                const rLocs = rHere.map(t => t.location).join(', ');
-                const hLocs = hHere.map(t => t.location).join(', ');
-                pillsHtml = `<div class="pill overlap">Both away</div>`;
-                if (rLocs !== hLocs) pillsHtml += `<div class="pill ryan" style="font-size:9px;opacity:.8">${rLocs}</div><div class="pill hannah" style="font-size:9px;opacity:.8">${hLocs}</div>`;
-            } else {
-                active.forEach(t => {
-                    const cls2 = t.person === 'Ryan' ? 'ryan' : 'hannah';
-                    const pre = t.isSingle ? '· ' : '';
-                    pillsHtml += `<div class="pill ${cls2}">${pre}${t.location}</div>`;
-                });
+            // Mark check flags for overlaps
+            const hasRyan = ryanDays.has(dateISOStringKey);
+            const hasHannah = hannahDays.has(dateISOStringKey);
+            
+            if (hasRyan && hasHannah) {
+                dayCell.classList.add('has-overlap');
+            }
+            if (currentCellDate.getTime() === window.today.getTime()) {
+                dayCell.classList.add('today');
             }
 
-            let popupHtml = '';
-            if (active.length > 0) {
-                const dateLabel = cur.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-                popupHtml = `<div class="day-popup"><div class="popup-date">${dateLabel}</div>`;
-                if (overlap) {
-                    popupHtml += `<div class="popup-trip overlap"><div class="popup-trip-person overlap">Both away</div></div>`;
+            // Create basic structural layout numbering
+            let innerContent = `<div class="day-num">${dayNum}</div><div class="pills">`;
+            let matchingTrips = [];
+
+            window.trips.forEach(t => {
+                const parsed = window.parseTrip(t);
+                if (window.toDateOnly(dateISOStringKey) >= parsed.startDate && window.toDateOnly(dateISOStringKey) <= parsed.endDate) {
+                    matchingTrips.push(t);
                 }
-                active.forEach(t => {
-                    const cls2 = t.person.toLowerCase();
-                    popupHtml += `
-                        <div class="popup-trip ${cls2}">
-                            <div class="popup-trip-person ${cls2}">${t.person}</div>
+            });
+
+            // Put layout pill markers inside calendar nodes
+            if (hasRyan && hasHannah) {
+                const ryanLoc = matchingTrips.find(t => t.person === 'Ryan')?.location || "Away";
+                const hannahLoc = matchingTrips.find(t => t.person === 'Hannah')?.location || "Away";
+                innerContent += `<div class="pill overlap">Overlap: ${ryanLoc} & ${hannahLoc}</div>`;
+            } else if (hasRyan) {
+                const loc = matchingTrips.find(t => t.person === 'Ryan')?.location || "Away";
+                innerContent += `<div class="pill ryan">${loc}</div>`;
+            } else if (hasHannah) {
+                const loc = matchingTrips.find(t => t.person === 'Hannah')?.location || "Away";
+                innerContent += `<div class="pill hannah">${loc}</div>`;
+            }
+
+            innerContent += `</div>`; // closes pills loop wrapper
+
+            // Setup dynamic hover info card detailing trips
+            if (matchingTrips.length > 0) {
+                innerContent += `<div class="day-popup"><div class="popup-date">${window.fmtFull(dateISOStringKey)}</div>`;
+                matchingTrips.forEach(t => {
+                    const typeClass = (hasRyan && hasHannah) ? 'overlap' : t.person.toLowerCase();
+                    innerContent += `
+                        <div class="popup-trip ${t.person.toLowerCase()}">
+                            <div class="popup-trip-person ${t.person.toLowerCase()}">${t.person}</div>
                             <div class="popup-trip-loc">${t.location}</div>
-                            <div class="popup-trip-dates">${fmtFull(t.start)}${t.isSingle ? '' : ` – ${fmtFull(t.end)}`}</div>
+                            <div class="popup-trip-dates">${window.fmt(t.start)} - ${window.fmt(t.end)}</div>
                         </div>
                     `;
                 });
-                popupHtml += '</div>';
+                innerContent += `</div>`;
             }
 
-            cell.innerHTML = `
-                <div class="day-num">${d}</div>
-                <div class="pills">${pillsHtml}</div>
-                ${popupHtml}
-            `;
-            grid.appendChild(cell);
+            dayCell.innerHTML = innerContent;
+            grid.appendChild(dayCell);
         }
     }
 
-    function renderAll() {
-        renderStats();
-        renderTripList();
-        renderCalendar();
+    window.renderAll = function() {
+        window.renderStats();
+        window.renderTripList();
+        window.renderCalendar();
     }
 
-    // Set date inputs to today's date as default
-    (function initDates() {
-        const todayStr = today.toISOString().slice(0, 10);
-        document.getElementById('tripStart').value = todayStr;
-        document.getElementById('tripEnd').value = todayStr;
-        document.getElementById('undoBtn').style.display = 'none';
-    })();
+    // Live sync pipeline listening to Firestore updates in real-time
+    onSnapshot(collection(db, "trips"), (snapshot) => {
+        window.trips = [];
+        snapshot.forEach((doc) => {
+            window.trips.push({
+                id: doc.id,
+                ...doc.data()
+            });
+        });
+        window.renderAll();
+    });
 
-    renderAll();
 </script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    
-      // 2. Your configuration object stays right here
-          const firebaseConfig = {
-            apiKey: "AIzaSyAkzpDjl42VcYPp5YkQSYVnxLHLq3XkpCw",
-            authDomain: "calendar-afe4e.firebaseapp.com",
-            projectId: "calendar-afe4e",
-            storageBucket: "calendar-afe4e.firebasestorage.app",
-            messagingSenderId: "813186329775",
-            appId: "1:813186329775:web:8e406932c403d57119b85a",
-            measurementId: "G-KQCR0BTQDD"
-          };
-    
-      // 3. Add these two lines right below the configuration to turn it on
-          const app = initializeApp(firebaseConfig);
-          const db = getFirestore(app);
-    
-      // --- NOW YOUR DATABASE IS CONNECTED ---
-      // You can start writing your custom calendar functions right here!
-    
-    </script>
 </body>
 </html>
